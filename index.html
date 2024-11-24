@@ -193,7 +193,7 @@
         const homeButton = document.querySelector('.game > button');
         const container = document.querySelector('.container');
         const loading = document.querySelector('.loading');
-        let mobileVisitsInsert;
+        let mobileVisitsInsert = '';
     
         fetch(`${tortilla_base_url}/api/list?type=all`)
             .then(response => response.json())
