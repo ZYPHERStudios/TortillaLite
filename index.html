@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tortilla Lite</title>
+    <style>
+        * {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --background-color: #f0f0f0;
+            --text-color: #000000;
+            --game-background-color: #fff;
+            --border-color: #ddd;
+            --button-hover-color: #555555;
+        }
+
+        [data-theme="dark"] {
+            --background-color: #121212;
+            --text-color: #ffffff;
+            --game-background-color: #2d2d2d;
+            --border-color: transparent;
+            --button-hover-color: #888888;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            color: var(--text-color);
+            background-color: var(--background-color);
+        }
+
+        .loading {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-align: center;
+        }
+        
+        .title {
+            margin: 1vh;
+            margin-bottom: 0;
+            cursor: default;
+        }
+
+        .title a {
+            font-size: 4vh;
+            font-weight: bold;
+        }
+
+        .title p {
+            position: absolute;
+            padding: 1vw;
+        }
+
+        .title #visits {
+            top: 0;
+            left: 0;
+        }
+
+        .title #version {
+            top: 0;
+            right: 0;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1vh;
+            padding: 1vh;
+            width: 95%;
+        }
+
+        .game-item {
+            background-color: var(--game-background-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 25vh;
+            padding: 5%;
+            cursor: pointer;
+        }
+
+        .game-item img {
+            width: auto;
+            height: 100px;
+            object-fit: contain;
+            margin-bottom: 10px;
+            border-radius: 1vh;
+        }
+
+        .game-item:hover {
+            transform: scale(1.025) /*translateY(-0.25vw)*/;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .game {
+            width: 100%;
+            height: 100%;
+            border: none;
+            z-index: 5;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .gameFrame {
+            border: none;
+            width: 100%;
+            height: 100%;
+        }
+
+        .game > button {
+            position: absolute;
+            top: 0;
+            left: 0;
+            border: none;
+            padding: 1vh;
+            padding-right: 2vh;
+            padding-bottom: 2vh;
+            font-size: 2vh;
+            border-bottom-right-radius: 1000px;
+            background-color: rgba(0, 0, 0, 0.5);
+            cursor: pointer;
+            color: #fff;
+            transition: 0.2s;
+        }
+
+        .game > button:hover {
+            background-color: rgba(0, 0, 0, 0.6);
+        }
+
+        @media screen and (max-width: 768px) {
+            .container {
+                grid-template-columns: repeat(auto-fill, minmax(100%, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading">
+        <h1>Loading...</h1>
+    </div>
+    <header class="title" style="display: none;">
+        <p id="visits"></p>
+        <p id="version">v0.0.1</p>
+        <a>Tortilla Lite</a>
+    </header>
+    <div class="container" style="display: none;"></div>
+    <div class="game" style="display: none;">
+        <iframe class="gameFrame" onload="this.contentWindow.focus();"></iframe>
+        <button onclick="closeGame()"><i class="fa-solid fa-house"></i></button>
+    </div>
+    <script>
+        const tortilla_base_url = 'https://dfs3rzq44v6as.cloudfront.net';
+        const game = document.querySelector('.game');
+        const gameFrame = document.querySelector('.gameFrame');
+        const homeButton = document.querySelector('.game > button');
+        const container = document.querySelector('.container');
+        const loading = document.querySelector('.loading');
+    
+        fetch(`${tortilla_base_url}/api/list?type=all`)
+            .then(response => response.json())
+            .then(data => {
+                let games = data[0]?.games || [];
+                const eag = data[2]?.eag || [];
+                games = games.concat(eag);
+
+                fetch(`${tortilla_base_url}/api/stats`).then(response => response.json()).then(visits => {document.querySelectorAll(".title > p")[0].innerHTML = `${visits.visits.toLocaleString()} visits`});
+
+                let removedGames = [];
+    
+                games = games.slice(1).filter(game => game.type !== "proxied" && !removedGames.includes(game.uuid));
+                games.sort((a, b) => a.name.localeCompare(b.name));
+    
+                let imagesLoaded = 0;
+    
+                const checkImages = () => {
+                    if (imagesLoaded === games.length) {
+                        document.querySelector('.loading').style.display = 'none';
+                        document.querySelector('.title').style.display = 'block';
+                        container.style.display = 'grid';
+                    }
+                };
+    
+                games.forEach(game => {
+                    const gameDiv = document.createElement('div');
+                    gameDiv.classList.add('game-item');
+
+                    gameDiv.setAttribute("onclick", game.custom_open ? `openGame("${game.uuid}", "${game.name}", "${game.custom_open}");` : `openGame("${game.uuid}", "${game.name}");`);
+    
+                    const iconExt = game.custom_icon_ext || 'webp';
+                    const gameIcon = document.createElement('img');
+                    gameIcon.src = `${tortilla_base_url}/assets/img/lessons/${game.uuid}.${iconExt}`;
+                    gameIcon.alt = game.name;
+                    gameIcon.draggable = false;
+                    gameIcon.style = game.icon_custom_style;
+    
+                    gameIcon.onload = () => {
+                        imagesLoaded++;
+                        checkImages();
+                    };
+    
+                    gameIcon.onerror = () => {
+                        console.error(`Failed to load image: ${gameIcon.src}`);
+                        this.src = `${tortilla_base_url}/assets/img/missing.webp`;
+                        imagesLoaded++;
+                        checkImages();
+                    };
+    
+                    const gameName = document.createElement('div');
+                    gameName.textContent = game.name;
+    
+                    gameDiv.appendChild(gameIcon);
+                    gameDiv.appendChild(gameName);
+    
+                    container.appendChild(gameDiv);
+                });
+    
+                if (games.length === 0) {
+                    checkImages();
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching data:', error);
+                document.querySelector('.loading > h1').textContent = `Error: ${error.message}`;
+                document.querySelector('.loading > h1').style.color = '#f65959';
+            });
+        
+        function openGame(uuid, name, custom) {
+            game.style.display = 'block';
+            loading.style.display = 'flex';
+            container.style.display = 'none';
+            document.querySelector('.title').style.display = 'none';
+            if (!custom) {
+                gameFrame.src = `${tortilla_base_url}/lessons/${uuid}/`;
+            } else {
+                gameFrame.src = `${tortilla_base_url}/${custom.replace('../', '')}`;
+            }
+            gameFrame.contentWindow.focus();
+            document.title = name;
+        }
+
+        function closeGame() {
+            game.style.display = 'none';
+            loading.style.display = 'none';
+            container.style.display = 'grid';
+            document.querySelector('.title').style.display = 'block';
+            gameFrame.src = '';
+        }
+
+        const icon = document.querySelector('link[rel="icon"]') || document.createElement('link');
+        icon.rel = 'icon';
+        icon.href = `${tortilla_base_url}/assets/img/tortilla.png`;
+        document.head.appendChild(icon);
+
+        const fontAwesome = document.createElement('link');
+        fontAwesome.rel = 'stylesheet';
+        fontAwesome.href = `${tortilla_base_url}/assets/css/fontawesome.css`;
+        document.head.appendChild(fontAwesome);
+
+        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const defaultTheme = (prefersDark ? "dark" : "light");
+        document.documentElement.setAttribute("data-theme", defaultTheme);
+    </script>
+</body>
+</html>
