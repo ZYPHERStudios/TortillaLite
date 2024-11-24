@@ -59,7 +59,7 @@
 
         .title p {
             position: absolute;
-            padding: 1vw;
+            padding: 1vh;
         }
 
         .title #visits {
@@ -161,6 +161,14 @@
                 width: auto;
                 height: 65%;
             }
+
+            .title p {
+                font-size: 2vh;
+            }
+
+            .visits {
+                text-align: left;
+            }
         }
     </style>
 </head>
@@ -185,6 +193,7 @@
         const homeButton = document.querySelector('.game > button');
         const container = document.querySelector('.container');
         const loading = document.querySelector('.loading');
+        let mobileVisitsInsert;
     
         fetch(`${tortilla_base_url}/api/list?type=all`)
             .then(response => response.json())
@@ -193,7 +202,7 @@
                 const eag = data[2]?.eag || [];
                 games = games.concat(eag);
 
-                fetch(`${tortilla_base_url}/api/stats`).then(response => response.json()).then(visits => {document.querySelectorAll(".title > p")[0].innerHTML = `${visits.visits.toLocaleString()} visits`});
+                fetch(`${tortilla_base_url}/api/stats`).then(response => response.json()).then(visits => {document.querySelectorAll(".title > p")[0].innerHTML = `${visits.visits.toLocaleString()} ${mobileVisitsInsert}visits`});
 
                 let removedGames = [];
     
@@ -280,7 +289,10 @@
             return check;
         };
 
-        document.documentElement.setAttribute("data-mobile", mobileCheck());
+        if (mobileCheck()) {
+            document.documentElement.setAttribute("data-mobile", "true");
+            mobileVisitsInsert = "<br>"
+        }
     </script>
 </body>
 </html>
